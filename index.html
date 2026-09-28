@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChatGPT - AI Assistant</title>
+  <meta name="description" content="A modern, responsive ChatGPT-inspired UI connected to an n8n webhook backend.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Highlight.js for code block syntax highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" id="hljs-theme">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  
+  <!-- Marked.js for fast & safe Markdown parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- DOMPurify for HTML sanitization -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.8/purify.min.js"></script>
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-layout" id="appLayout">
+    <!-- Backdrop for mobile sidebar -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <!-- LEFT SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <button class="new-chat-btn" id="newChatBtn" title="Start a new chat (Ctrl + K)">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <span>New chat</span>
+          <kbd class="shortcut-badge">Ctrl K</kbd>
+        </button>
+        <button class="icon-btn sidebar-toggle-btn" id="sidebarCloseBtn" title="Close sidebar" aria-label="Close sidebar">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="18" height="18" x="3" y="3" rx="2"/>
+            <path d="M9 3v18"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Search in conversations -->
+      <div class="sidebar-search-box">
+        <svg class="icon search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="chatSearchInput" placeholder="Search chats..." autocomplete="off">
+        <button class="clear-search-btn" id="clearSearchBtn" style="display: none;">&times;</button>
+      </div>
+
+      <!-- Chat history list -->
+      <div class="chat-history-container" id="chatHistoryContainer">
+        <div class="history-section" id="historySection">
+          <!-- Populated dynamically via JS -->
+        </div>
+        <div class="empty-history-state" id="emptyHistoryState" style="display: none;">
+          <p>No conversations found</p>
+        </div>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <div class="connection-status-card" id="connectionStatusCard">
+          <div class="status-indicator online" id="statusIndicator"></div>
+          <div class="status-info">
+            <span class="status-title">n8n Connected</span>
+            <span class="status-subtitle" id="statusUrlPreview">praveenma.app.n8n.cloud</span>
+          </div>
+          <button class="icon-btn small" id="openSettingsQuickBtn" title="Backend Settings">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="sidebar-user-row">
+          <div class="user-avatar" id="userAvatar">
+            <span>U</span>
+          </div>
+          <div class="user-details">
+            <span class="user-name" id="userNameDisplay">You</span>
+            <span class="user-plan">Free Plan</span>
+          </div>
+          <button class="icon-btn theme-toggle-btn" id="themeToggleBtn" title="Toggle theme">
+            <!-- Sun / Moon icon -->
+            <svg class="icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+            </svg>
+            <svg class="icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+              <circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN CHAT CONTAINER -->
+    <main class="main-content">
+      <!-- TOP NAVIGATION BAR -->
+      <header class="top-nav">
+        <div class="nav-left">
+          <button class="icon-btn sidebar-open-btn" id="sidebarOpenBtn" title="Open sidebar" aria-label="Open sidebar">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="18" x="3" y="3" rx="2"/>
+              <path d="M9 3v18"/>
+            </svg>
+          </button>
+
+          <!-- Model selector / Assistant badge -->
+          <div class="model-badge">
+            <div class="model-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              </svg>
+            </div>
+            <span class="model-name">ChatGPT</span>
+            <span class="model-version">n8n AI</span>
+            <span class="status-dot"></span>
+          </div>
+        </div>
+
+        <div class="nav-right">
+          <button class="action-btn" id="exportChatBtn" title="Export conversation as Markdown">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>Export</span>
+          </button>
+          
+          <button class="action-btn" id="clearChatBtn" title="Clear current messages">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18"/>
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+            </svg>
+            <span>Clear</span>
+          </button>
+
+          <button class="icon-btn" id="openSettingsBtn" title="Settings & Webhook Config">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- MESSAGES DISPLAY AREA -->
+      <div class="chat-scroll-container" id="chatScrollContainer">
+        <!-- WELCOME SCREEN (Shown when chat is empty) -->
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-logo-badge">
+            <svg class="welcome-spark-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+              <path d="M5 3v4"/>
+              <path d="M3 5h4"/>
+              <path d="M19 17v4"/>
+              <path d="M17 19h4"/>
+            </svg>
+          </div>
+          <h1 class="welcome-title">What can I help with today?</h1>
+          <p class="welcome-desc">Connected directly to your live <strong>n8n AI Workflow</strong> via OpenRouter.</p>
+
+          <!-- Prompt Suggestion Cards -->
+          <div class="prompt-suggestions-grid">
+            <button class="prompt-card" data-prompt="What are the requirements to open a Savings Account?">
+              <div class="prompt-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="20" height="14" x="2" y="5" rx="2"/>
+                  <line x1="2" x2="22" y1="10" y2="10"/>
+                </svg>
+              </div>
+              <div class="prompt-text">
+                <span class="prompt-title">Open an Account</span>
+                <span class="prompt-sub">Requirements and documents for savings accounts</span>
+              </div>
+            </button>
+
+            <button class="prompt-card" data-prompt="Explain the benefits and eligibility for ICICI Credit Cards.">
+              <div class="prompt-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+              </div>
+              <div class="prompt-text">
+                <span class="prompt-title">Credit Card Benefits</span>
+                <span class="prompt-sub">Explore reward cards and eligibility</span>
+              </div>
+            </button>
+
+            <button class="prompt-card" data-prompt="How do I apply for a Personal Loan and what is the interest rate?">
+              <div class="prompt-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                  <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+              </div>
+              <div class="prompt-text">
+                <span class="prompt-title">Personal Loans</span>
+                <span class="prompt-sub">Interest rates, tenures, and online application</span>
+              </div>
+            </button>
+
+            <button class="prompt-card" data-prompt="How can I activate internet banking and mobile banking?">
+              <div class="prompt-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/>
+                  <path d="M12 18h.01"/>
+                </svg>
+              </div>
+              <div class="prompt-text">
+                <span class="prompt-title">Digital Banking</span>
+                <span class="prompt-sub">Activate mobile app and net banking</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- MESSAGES FEED -->
+        <div class="messages-feed" id="messagesFeed">
+          <!-- Messages will be rendered here dynamically -->
+        </div>
+
+        <!-- TYPING INDICATOR -->
+        <div class="typing-indicator-container" id="typingIndicatorContainer" style="display: none;">
+          <div class="message-row assistant">
+            <div class="message-avatar bot">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+              </svg>
+            </div>
+            <div class="message-bubble typing-bubble">
+              <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <span class="typing-label">Thinking...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="scroll-anchor" id="scrollAnchor"></div>
+      </div>
+
+      <!-- BOTTOM COMPOSER AREA -->
+      <footer class="bottom-composer">
+        <div class="composer-container">
+          <form class="input-card" id="chatForm">
+            <!-- Optional tools/attachment button -->
+            <button type="button" class="composer-action-btn attach-btn" id="attachBtn" title="Attachment or tools">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+            </button>
+
+            <!-- Auto-expanding Textarea -->
+            <textarea
+              id="messageInput"
+              class="message-textarea"
+              placeholder="Ask anything..."
+              rows="1"
+              autofocus
+            ></textarea>
+
+            <!-- Send / Stop button -->
+            <button type="submit" class="composer-action-btn send-btn" id="sendBtn" title="Send message (Enter)" disabled>
+              <svg class="icon send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="19" x2="12" y2="5"/>
+                <polyline points="5 12 12 5 19 12"/>
+              </svg>
+              <div class="stop-icon" style="display: none;">
+                <rect width="10" height="10" x="7" y="7" rx="1.5" fill="currentColor"/>
+              </div>
+            </button>
+          </form>
+
+          <p class="composer-disclaimer">
+            ChatGPT can make mistakes. Check important banking info. Connected to <span class="webhook-tag">n8n</span>
+          </p>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- SETTINGS MODAL -->
+  <div class="modal-overlay" id="settingsModal" style="display: none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+          <h2>Configuration & Settings</h2>
+        </div>
+        <button class="icon-btn" id="closeSettingsModalBtn" title="Close">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- n8n Webhook URL Setting -->
+        <div class="form-group">
+          <label for="webhookUrlInput">
+            <strong>n8n Webhook Production URL</strong>
+            <span class="label-hint">POST endpoint executing your workflow</span>
+          </label>
+          <div class="input-with-button">
+            <input type="url" id="webhookUrlInput" placeholder="https://praveenma.app.n8n.cloud/webhook/chat" autocomplete="off">
+            <button type="button" class="btn secondary" id="testWebhookBtn">
+              <span>Test Connection</span>
+            </button>
+          </div>
+          <div class="test-feedback" id="webhookTestFeedback"></div>
+        </div>
+
+        <!-- Quick Switcher to Test Webhook -->
+        <div class="quick-links">
+          <span>Quick presets:</span>
+          <button type="button" class="link-btn" id="useProdUrlBtn">Set Production URL</button>
+          <button type="button" class="link-btn" id="useTestUrlBtn">Set Test URL (/webhook-test/chat)</button>
+        </div>
+
+        <hr class="divider">
+
+        <!-- User Name -->
+        <div class="form-group">
+          <label for="userNameInput">
+            <strong>Your Name / Profile</strong>
+          </label>
+          <input type="text" id="userNameInput" placeholder="User" maxlength="30">
+        </div>
+
+        <hr class="divider">
+
+        <!-- Data Management -->
+        <div class="form-group">
+          <label><strong>Data & History</strong></label>
+          <div class="action-row">
+            <button type="button" class="btn danger" id="clearAllHistoryBtn">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18"/>
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+              </svg>
+              <span>Clear All Chat History</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn secondary" id="cancelSettingsBtn">Cancel</button>
+        <button type="button" class="btn primary" id="saveSettingsBtn">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
